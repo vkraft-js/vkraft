@@ -1,6 +1,7 @@
 import type { VK } from "@vkraft/api";
 import { LongPoll } from "@vkraft/api/updates";
 import type { LongPollEvent } from "@vkraft/api/updates";
+import type { CallbackData } from "@gramio/callback-data";
 import { Composer } from "./composer.ts";
 import type { Handler, Middleware } from "./composer.ts";
 import {
@@ -8,6 +9,7 @@ import {
 	type ContextFor,
 	type EventType,
 	MessageContext,
+	MessageEventContext,
 	createContext,
 } from "./contexts/index.ts";
 
@@ -54,6 +56,44 @@ export class Bot<Derived = {}> {
 				const match = ctx.text.match(regex);
 				if (!match) return false;
 				(ctx as any).$match = match;
+				return true;
+			},
+			fn: handler as Handler<any>,
+		});
+
+		return this;
+	}
+
+	messageEvent<Trigger extends CallbackData | string | RegExp>(
+		trigger: Trigger,
+		handler: Handler<
+			MessageEventContext &
+				Derived & {
+					$data: Trigger extends CallbackData<infer S, any>
+						? S
+						: Trigger extends RegExp
+							? RegExpMatchArray
+							: never;
+				}
+		>,
+	): this {
+		this.composer.routes.push({
+			type: "message_event",
+			filter: (ctx: MessageEventContext) => {
+				const payload = ctx.payload;
+				if (!payload) return false;
+
+				if (typeof trigger === "string") {
+					if (payload !== trigger) return false;
+				} else if (trigger instanceof RegExp) {
+					const match = payload.match(trigger);
+					if (!match) return false;
+					(ctx as any).$data = match;
+				} else {
+					// CallbackData
+					if (!trigger.filter(payload)) return false;
+					(ctx as any).$data = trigger.unpack(payload);
+				}
 				return true;
 			},
 			fn: handler as Handler<any>,

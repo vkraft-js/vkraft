@@ -11,3 +11,5 @@ export {
 	UnsupportedEventContext,
 } from "./contexts/index.ts";
 export type { EventType, ContextFor, ContextMap } from "./contexts/index.ts";
+export { CallbackData } from "@gramio/callback-data";
+export type { InferDataPack, InferDataUnpack, SafeUnpackResult } from "@gramio/callback-data";

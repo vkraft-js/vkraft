@@ -3,6 +3,7 @@
  */
 import type { VK } from "@vkraft/api";
 import { Bot } from "../src/bot.ts";
+import { CallbackData } from "@gramio/callback-data";
 import type { MessageContext } from "../src/contexts/message.ts";
 import type { GroupMemberContext } from "../src/contexts/group-member.ts";
 import type { WallPostContext } from "../src/contexts/wall-post.ts";
@@ -93,12 +94,46 @@ bot.onError((err, ctx) => {
 	ctx.type satisfies string;
 });
 
+// --- messageEvent() with CallbackData ---
+
+const itemAction = new CallbackData("item").number("id").string("action");
+
+bot.messageEvent(itemAction, (ctx) => {
+	ctx satisfies MessageEventContext & { $data: { id: number; action: string } };
+	ctx.$data.id satisfies number;
+	ctx.$data.action satisfies string;
+	ctx.userId satisfies number;
+	ctx.peerId satisfies number;
+	ctx.answer({ event_data: "ok" });
+});
+
+// --- messageEvent() with RegExp ---
+
+bot.messageEvent(/^action_(\d+)$/, (ctx) => {
+	ctx.$data satisfies RegExpMatchArray;
+	ctx.userId satisfies number;
+});
+
+// --- messageEvent() with derive ---
+
+const botWithDerived = new Bot(vk, { group_id: 1 }).derive(() => ({ x: 1 }));
+
+botWithDerived.messageEvent(itemAction, (ctx) => {
+	ctx.$data.id satisfies number;
+	ctx.x satisfies number;
+	ctx.userId satisfies number;
+});
+
 // --- chaining ---
 
 const chained = new Bot(vk, { group_id: 1 })
 	.derive(() => ({ x: 1 }))
 	.on("message_new", (ctx) => {
 		ctx.x satisfies number;
+	})
+	.messageEvent(itemAction, (ctx) => {
+		ctx.x satisfies number;
+		ctx.$data.id satisfies number;
 	})
 	.command("test", (ctx) => {
 		ctx.x satisfies number;

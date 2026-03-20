@@ -30,6 +30,7 @@
 		"prepublishOnly": "bunx pkgroll"
 	},
 	"dependencies": {
+		"@gramio/callback-data": "^0.1.0",
 		"@vkraft/api": "file:../api",
 		"@vkraft/types": "file:../types"
 	},

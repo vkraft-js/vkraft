@@ -1,8 +1,10 @@
 import { describe, test, expect, mock } from "bun:test";
 import { Bot } from "../src/bot.ts";
 import { MessageContext } from "../src/contexts/message.ts";
+import { MessageEventContext } from "../src/contexts/message-event.ts";
 import { UnsupportedEventContext } from "../src/contexts/unsupported.ts";
 import { createContext } from "../src/contexts/mapping.ts";
+import { CallbackData } from "@gramio/callback-data";
 
 function createVK() {
 	return {
@@ -237,5 +239,125 @@ describe("Bot", () => {
 
 		// on() handlers don't call next(), so only first fires
 		expect(calls).toEqual([1]);
+	});
+});
+
+function messageEventEvent(payload: string) {
+	return {
+		type: "message_event",
+		object: {
+			user_id: 123,
+			peer_id: 2000000001,
+			event_id: "btn_evt_1",
+			payload,
+		},
+		group_id: 999,
+		event_id: "evt2",
+	};
+}
+
+describe("Bot.messageEvent()", () => {
+	test("matches with CallbackData and unpacks $data", async () => {
+		const vk = createVK();
+		const bot = new Bot(vk, { group_id: 999 });
+
+		const itemAction = new CallbackData("item").number("id").string("action");
+		const packed = itemAction.pack({ id: 42, action: "buy" });
+
+		let captured: { id: number; action: string } | undefined;
+		bot.messageEvent(itemAction, (ctx) => {
+			captured = ctx.$data;
+		});
+
+		const ctx = createContext(vk, messageEventEvent(packed));
+		const composed = (bot as any).composer.compose();
+		await composed(ctx, async () => {});
+
+		expect(captured).toEqual({ id: 42, action: "buy" });
+	});
+
+	test("does not match CallbackData with wrong payload", async () => {
+		const vk = createVK();
+		const bot = new Bot(vk, { group_id: 999 });
+
+		const itemAction = new CallbackData("item").number("id");
+		const otherAction = new CallbackData("other").number("id");
+		const packed = otherAction.pack({ id: 1 });
+
+		const handler = mock(() => {});
+		bot.messageEvent(itemAction, handler);
+
+		const ctx = createContext(vk, messageEventEvent(packed));
+		const composed = (bot as any).composer.compose();
+		await composed(ctx, async () => {});
+
+		expect(handler).not.toHaveBeenCalled();
+	});
+
+	test("matches with string trigger (exact match)", async () => {
+		const vk = createVK();
+		const bot = new Bot(vk, { group_id: 999 });
+		const handler = mock(() => {});
+
+		bot.messageEvent("menu_open", handler);
+
+		const ctx1 = createContext(vk, messageEventEvent("menu_open"));
+		const composed = (bot as any).composer.compose();
+		await composed(ctx1, async () => {});
+		expect(handler).toHaveBeenCalledTimes(1);
+
+		const ctx2 = createContext(vk, messageEventEvent("menu_close"));
+		await composed(ctx2, async () => {});
+		expect(handler).toHaveBeenCalledTimes(1);
+	});
+
+	test("matches with RegExp trigger and captures $data", async () => {
+		const vk = createVK();
+		const bot = new Bot(vk, { group_id: 999 });
+		let captured: RegExpMatchArray | undefined;
+
+		bot.messageEvent(/^action_(\d+)$/, (ctx) => {
+			captured = ctx.$data;
+		});
+
+		const ctx = createContext(vk, messageEventEvent("action_42"));
+		const composed = (bot as any).composer.compose();
+		await composed(ctx, async () => {});
+
+		expect(captured).not.toBeUndefined();
+		expect(captured![1]).toBe("42");
+	});
+
+	test("context is MessageEventContext", async () => {
+		const vk = createVK();
+		const bot = new Bot(vk, { group_id: 999 });
+
+		const data = new CallbackData("test");
+		const packed = data.pack();
+
+		let isInstance = false;
+		bot.messageEvent(data, (ctx) => {
+			isInstance = ctx instanceof MessageEventContext;
+		});
+
+		const ctx = createContext(vk, messageEventEvent(packed));
+		const composed = (bot as any).composer.compose();
+		await composed(ctx, async () => {});
+
+		expect(isInstance).toBe(true);
+	});
+
+	test("does not fire for message_new events", async () => {
+		const vk = createVK();
+		const bot = new Bot(vk, { group_id: 999 });
+		const handler = mock(() => {});
+
+		bot.messageEvent("payload", handler);
+
+		const ctx = createContext(vk, messageEvent("payload"));
+		const composed = (bot as any).composer.compose();
+		await composed(ctx, async () => {});
+
+		expect(handler).not.toHaveBeenCalled();
 	});
 });
