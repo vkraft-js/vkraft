@@ -1,0 +1,44 @@
+{
+	"name": "vkraft",
+	"version": "0.1.0",
+	"description": "Type-safe VK Bot framework built on @vkraft/api",
+	"keywords": [
+		"vk",
+		"vkontakte",
+		"bot",
+		"framework",
+		"typescript",
+		"longpoll"
+	],
+	"type": "module",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			},
+			"import": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			}
+		}
+	},
+	"scripts": {
+		"prepublishOnly": "bunx pkgroll"
+	},
+	"dependencies": {
+		"@vkraft/api": "file:../api",
+		"@vkraft/types": "file:../types"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.11",
+		"pkgroll": "^2.12.1",
+		"typescript": "^5.8.3"
+	},
+	"sideEffects": false,
+	"files": ["dist"],
+	"license": "MIT"
+}
