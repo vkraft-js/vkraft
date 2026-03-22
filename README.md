@@ -1,6 +1,6 @@
 # vkraft
 
-Type-safe VK Bot framework for TypeScript. Simple classes, Koa-style middleware, [`@gramio/callback-data`](https://github.com/gramiojs/callback-data) integration.
+Type-safe VK Bot framework for TypeScript. Simple classes, middlewares, [`@gramio/callback-data`](https://github.com/gramiojs/callback-data) integration.
 
 Built on top of [`@vkraft/api`](https://github.com/vkraftjs/api) and [`@vkraft/types`](https://github.com/vkraftjs/types).
 
